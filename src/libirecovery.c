@@ -1781,7 +1781,7 @@ static irecv_error_t libusb_usb_open_handle_with_descriptor_and_ecid(irecv_clien
 		irecv_load_device_info_from_iboot_string(client, serial_str);
 	}
 
-	if (ecid != 0) {
+	if (ecid != 0 && client->mode != KIS_PRODUCT_ID) {
 		if (client->device_info.ecid != ecid) {
 			irecv_close(client);
 			return IRECV_E_NO_DEVICE; //wrong device
@@ -2448,7 +2448,7 @@ static void* _irecv_handle_device_add(void *userdata)
 		
 	if (product_id == KIS_PRODUCT_ID) {
 		irecv_client_t client;
-		irecv_error_t error = libusb_usb_open_handle_with_descriptor_and_ecid(&client, &usb_handle, &devdesc, 0);
+		irecv_error_t error = libusb_usb_open_handle_with_descriptor_and_ecid(&client, usb_handle, &devdesc, 0);
 		if (error != IRECV_E_SUCCESS) {
 			debug("%s: ERROR: could not open KIS device!\n", __func__);
 			return NULL;
@@ -2464,9 +2464,8 @@ static void* _irecv_handle_device_add(void *userdata)
 			debug("%s: Failed to get string descriptor: %s\n", __func__, libusb_error_name(libusb_error));
 			return 0;
 		}
+		libusb_close(usb_handle);
 	}
-
-	libusb_close(usb_handle);
 #endif /* !HAVE_IOKIT */
 #endif /* !WIN32 */
 	memset(&client_loc, '\0', sizeof(client_loc));
@@ -2764,7 +2763,7 @@ static void *_irecv_event_handler(void* data)
 #else /* !HAVE_IOKIT */
 #ifdef HAVE_LIBUSB_HOTPLUG_API
 	static libusb_hotplug_callback_handle usb_hotplug_cb_handle;
-	libusb_hotplug_register_callback(irecv_hotplug_ctx, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, LIBUSB_HOTPLUG_ENUMERATE, APPLE_VENDOR_ID, LIBUSB_HOTPLUG_MATCH_ANY, 0, _irecv_usb_hotplug_cb, NULL, &usb_hotplug_cb_handle);
+	libusb_hotplug_register_callback(irecv_hotplug_ctx, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, LIBUSB_HOTPLUG_ENUMERATE, APPLE_VENDOR_ID, LIBUSB_HOTPLUG_MATCH_ANY, LIBUSB_HOTPLUG_MATCH_ANY, _irecv_usb_hotplug_cb, NULL, &usb_hotplug_cb_handle);
 	int running = 1;
 
 	mutex_lock(&(info->startup_mutex));
